@@ -323,7 +323,7 @@ function renderWaterfall(){
 
 /* ── AUTO-FETCH data.xlsx FROM GITHUB ── */
 (function(){
-  const DATA_URL='https://raw.githubusercontent.com/jennythomson-123/crude-flow-dashboard/main/data.xlsx';
+  const DATA_URL='https://raw.githubusercontent.com/jennythomson-123/crude-flow-dashboard-imports/main/data.xlsx';
   setStatus('Loading data…','');
   fetch(DATA_URL)
     .then(r=>{if(!r.ok)throw new Error('not found');return r.arrayBuffer();})
