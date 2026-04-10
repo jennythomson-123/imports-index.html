@@ -321,15 +321,15 @@ function renderWaterfall(){
   wChart=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},plugins:{legend:{display:false},tooltip:{callbacks:{label(item){if(item.dataset.label==='_float')return null;if(item.dataset.label==='Base/Final')return ' total: '+Math.round(item.raw).toLocaleString()+' kb/d';const raw=item.dataset.label==='Decline'?-item.raw:item.raw;return ' '+(raw>0?'+':'')+Math.round(raw).toLocaleString()+' kb/d';},filter(item){return item.dataset.label!=='_float'&&item.raw!==0;}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#555',font:{size:11}},border:{display:false}},y:{stacked:true,min:yMin,max:yMax,grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>Math.round(v).toLocaleString()},border:{display:false}}}},plugins:[{id:'wf-lbl',afterDatasetsDraw(chart){const{ctx:c,scales:{x,y},data}=chart;c.save();c.font='500 11px sans-serif';c.textBaseline='bottom';c.textAlign='center';const pD=data.datasets[2].data,nD=data.datasets[3].data,fD=data.datasets[0].data,grD=data.datasets[1].data;data.labels.forEach((lbl,i)=>{const xp=x.getPixelForValue(i);if(grD[i]>0){c.fillStyle='#333';c.fillText(Math.round(grD[i]).toLocaleString(),xp,y.getPixelForValue(grD[i])-4);return;}if(pD[i]>0){c.fillStyle='#1a3a1a';c.fillText('+'+Math.round(pD[i]).toLocaleString(),xp,y.getPixelForValue(fD[i]+pD[i])-4);}if(nD[i]>0){c.fillStyle='#4a1a1a';c.fillText('-'+Math.round(nD[i]).toLocaleString(),xp,y.getPixelForValue(fD[i])-4);}});c.restore();}}]});
 }
 
-/* ── AUTO-FETCH data.xlsx FROM GITHUB ── */
+/* ── AUTO-FETCH data2.xlsx FROM GITHUB ── */
 (function(){
-  const DATA_URL='https://raw.githubusercontent.com/jennythomson-123/crude-flow-dashboard-imports/main/data.xlsx';
+  const DATA_URL='https://raw.githubusercontent.com/jennythomson-123/crude-flow-dashboard-imports/main/data2.xlsx';
   setStatus('Loading data…','');
   fetch(DATA_URL)
     .then(r=>{if(!r.ok)throw new Error('not found');return r.arrayBuffer();})
-    .then(buf=>{processRawData(buf,'data.xlsx');})
+    .then(buf=>{processRawData(buf,'data2.xlsx');})
     .catch(()=>{
-      setStatus('No data.xlsx found — upload your Excel file to update','');
+      setStatus('No data2.xlsx found — upload your Excel file to update','');
       document.getElementById('period-lbl').textContent='— sample data';
       const SAMPLE=[
         {exRegion:"Africa",exCountry:"Nigeria",imRegion:"Africa",imCountry:"Ivory Coast",vol1:35.63,vol2:32.18,mom:-3.45,avg2025:54.09,vsAvg:-21.91},
