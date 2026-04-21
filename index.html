@@ -3,53 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crude flow change dashboard</title>
+<title>Crude flow dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; font-size: 14px; }
-.topbar { background: #fff; border-bottom: 0.5px solid rgba(0,0,0,0.12); padding: 13px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+.topbar { background: #fff; border-bottom: 0.5px solid rgba(0,0,0,0.12); padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .topbar h1 { font-size: 15px; font-weight: 500; flex: 1; min-width: 180px; }
-.period-label { font-size: 11px; color: #aaa; font-weight: 400; }
 .upload-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 7px 13px; border-radius: 8px; border: 0.5px solid rgba(0,0,0,0.22); background: #fff; color: #1a1a1a; cursor: pointer; font-family: inherit; }
 .upload-btn:hover { background: #f5f5f0; }
 .upload-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 .status { font-size: 11px; color: #aaa; }
 .status.ok  { color: #1D9E75; font-weight: 500; }
 .status.err { color: #E24B4A; font-weight: 500; }
+
+/* GLOBAL CONTROLS BAR */
+.controls-bar { background: #fff; border-bottom: 0.5px solid rgba(0,0,0,0.10); padding: 10px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ctrl-group { display: flex; align-items: center; gap: 8px; }
+.ctrl-group label { font-size: 11px; color: #888; white-space: nowrap; }
+select { font-size: 12px; padding: 5px 9px; border-radius: 7px; border: 0.5px solid rgba(0,0,0,0.22); background: #fff; color: #1a1a1a; font-family: inherit; cursor: pointer; }
+.view-toggle { display: flex; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; overflow: hidden; }
+.vtab { font-size: 11px; padding: 5px 14px; background: #fff; border: none; color: #888; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.vtab.active { background: #1a1a1a; color: #fff; font-weight: 500; }
+.divider { width: 0.5px; background: rgba(0,0,0,0.1); height: 28px; }
+
 .tabs-bar { display: flex; background: #fff; border-bottom: 0.5px solid rgba(0,0,0,0.12); padding: 0 24px; overflow-x: auto; }
 .tab { padding: 10px 18px; font-size: 12px; cursor: pointer; border: none; border-bottom: 2px solid transparent; color: #888; background: none; font-family: inherit; white-space: nowrap; }
 .tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 500; }
 .tab:hover:not(.active) { color: #444; }
+
 .panel { display: none; padding: 20px 24px; }
 .panel.active { display: block; }
-.col-info { font-size: 11px; color: #666; background: #fff; border: 0.5px solid rgba(0,0,0,0.08); border-radius: 7px; padding: 9px 14px; margin-bottom: 14px; line-height: 2; display: none; }
-.col-info strong { color: #1a1a1a; }
-.col-pill { display: inline-block; background: #f0efe8; border-radius: 20px; padding: 1px 8px; font-size: 10px; color: #555; margin: 0 2px; }
-.row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-.stat-card { background: #fff; border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 105px; border: 0.5px solid rgba(0,0,0,0.08); }
+
+.stat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.stat-card { background: #fff; border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 110px; border: 0.5px solid rgba(0,0,0,0.08); }
 .stat-card .lbl { font-size: 11px; color: #888; margin-bottom: 2px; }
 .stat-card .val { font-size: 18px; font-weight: 500; }
-.controls { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-.controls .lbl { font-size: 12px; color: #666; }
-select { font-size: 12px; padding: 5px 9px; border-radius: 7px; border: 0.5px solid rgba(0,0,0,0.22); background: #fff; color: #1a1a1a; font-family: inherit; cursor: pointer; }
+
+.panel-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.panel-controls .lbl { font-size: 12px; color: #666; }
+.gran-toggle { display: flex; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; overflow: hidden; width: fit-content; }
+.gtab { font-size: 11px; padding: 5px 12px; background: #fff; border: none; color: #888; cursor: pointer; font-family: inherit; }
+.gtab.active { background: #1a1a1a; color: #fff; font-weight: 500; }
+
 .rtabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
 .rtab { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 0.5px solid rgba(0,0,0,0.18); background: #fff; color: #666; cursor: pointer; font-family: inherit; transition: all 0.12s; }
-.gran-toggle { display: flex; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; overflow: hidden; width: fit-content; }
-.gtab { font-size: 11px; padding: 5px 14px; background: #fff; border: none; color: #888; cursor: pointer; font-family: inherit; }
-.gtab.active { background: #1a1a1a; color: #fff; font-weight: 500; }
-.legend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
-.legend span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #666; }
-.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
 .chart-wrap { position: relative; width: 100%; }
-.note { font-size: 11px; color: #bbb; margin-top: 10px; border-top: 0.5px solid rgba(0,0,0,0.07); padding-top: 8px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.legend-row span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #666; }
+.sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.note { font-size: 11px; color: #bbb; margin-top: 8px; border-top: 0.5px solid rgba(0,0,0,0.07); padding-top: 8px; }
+.col-info { font-size: 11px; color: #666; background: #fff; border: 0.5px solid rgba(0,0,0,0.08); border-radius: 7px; padding: 8px 14px; margin-bottom: 12px; display: none; }
+.col-info strong { color: #1a1a1a; }
+.col-pill { display: inline-block; background: #f0efe8; border-radius: 20px; padding: 1px 8px; font-size: 10px; color: #555; margin: 0 2px; }
 #b-tooltip { display:none; position:absolute; background:#fff; border:0.5px solid rgba(0,0,0,0.15); border-radius:8px; padding:9px 13px; font-size:12px; pointer-events:none; z-index:10; max-width:240px; box-shadow:0 2px 8px rgba(0,0,0,0.07); }
 </style>
 </head>
 <body>
+
+<!-- TOP BAR -->
 <div class="topbar">
-  <h1>Crude export flow dashboard <span class="period-label" id="period-lbl"></span></h1>
+  <h1>Crude flow dashboard <span style="font-size:11px;color:#aaa;font-weight:400;" id="period-lbl"></span></h1>
   <label class="upload-btn">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M4 5l4-4 4 4M2 12v2h12v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Upload Excel
@@ -57,243 +75,1008 @@ select { font-size: 12px; padding: 5px 9px; border-radius: 7px; border: 0.5px so
   </label>
   <span class="status" id="status-msg">Loading data…</span>
 </div>
-<div class="tabs-bar">
-  <button class="tab active" onclick="switchTab('bubble',this)">Bubble scatter — volume by corridor</button>
-  <button class="tab" onclick="switchTab('diverging',this)">Diverging bars — m-o-m change</button>
-  <button class="tab" onclick="switchTab('waterfall',this)">Waterfall — by import region</button>
+
+<!-- GLOBAL CONTROLS -->
+<div class="controls-bar">
+  <div class="ctrl-group">
+    <label>Current month:</label>
+    <select id="sel-month"></select>
+  </div>
+  <div class="divider"></div>
+  <div class="ctrl-group">
+    <label>Prior month (auto):</label>
+    <span id="prior-month-lbl" style="font-size:12px;font-weight:500;color:#1a1a1a;">—</span>
+  </div>
+  <div class="divider"></div>
+  <div class="ctrl-group">
+    <label>View:</label>
+    <div class="view-toggle">
+      <button class="vtab active" id="vt-mom"    onclick="setView('mom')">m-o-m</button>
+      <button class="vtab"        id="vt-avg"    onclick="setView('avg')">vs Annual avg</button>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="ctrl-group">
+    <label>Export group:</label>
+    <select id="sel-ex-gran">
+      <option value="EX_COUNTRY">EX Country</option>
+      <option value="EX_REGION" selected>EX Region</option>
+      <option value="EX_Def_Region">EX Def Region</option>
+      <option value="EX_T_REGION">EX Trade Region</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>Import group:</label>
+    <select id="sel-im-gran">
+      <option value="IM_COUNTRY">IM Country</option>
+      <option value="IM_REGION" selected>IM Region</option>
+      <option value="IM_T_REGION">IM Trade Region</option>
+      <option value="IM_Def_Region">IM Def Region</option>
+    </select>
+  </div>
 </div>
 
+<!-- TABS -->
+<div class="tabs-bar">
+  <button class="tab active" onclick="switchTab('bubble',this)">Bubble scatter</button>
+  <button class="tab" onclick="switchTab('diverging',this)">Diverging bars</button>
+  <button class="tab" onclick="switchTab('waterfall',this)">Waterfall</button>
+  <button class="tab" onclick="switchTab('sankey',this)">Sankey — flow map</button>
+</div>
+
+<!-- BUBBLE PANEL -->
 <div class="panel active" id="panel-bubble">
   <div class="col-info" id="b-col-info"></div>
-  <div class="row" id="b-stats"></div>
-  <div class="controls">
-    <span class="lbl">Export region:</span>
-    <select id="b-ex-region"><option value="all">All</option></select>
-    <span class="lbl">Import region:</span>
-    <select id="b-im-region"><option value="all">All</option></select>
-  </div>
-  <div class="gran-toggle" style="margin-bottom:12px;">
-    <button class="gtab active" id="b-gran-region"  onclick="setBubbleGran('region')">By region</button>
-    <button class="gtab"        id="b-gran-country" onclick="setBubbleGran('country')">By country</button>
+  <div class="stat-row" id="b-stats"></div>
+  <div class="panel-controls">
+    <span class="lbl">Filter export:</span>
+    <select id="b-ex-filter"><option value="all">All</option></select>
+    <span class="lbl">Filter import:</span>
+    <select id="b-im-filter"><option value="all">All</option></select>
   </div>
   <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;" id="b-legend"></div>
   <div class="chart-wrap" style="height:520px;">
-    <canvas id="bubbleChart" role="img" aria-label="Bubble scatter of crude export corridors."></canvas>
+    <canvas id="bubbleChart" role="img" aria-label="Bubble scatter of crude flow corridors."></canvas>
   </div>
   <div id="b-tooltip"></div>
-  <div class="legend" style="margin-top:10px;">
-    <span style="color:#bbb;">Bubbles coloured by export region — labels show import region/country — bubble size = |m-o-m|</span>
-  </div>
   <p class="note" id="b-note"></p>
 </div>
 
+<!-- DIVERGING PANEL -->
 <div class="panel" id="panel-diverging">
   <div class="col-info" id="d-col-info"></div>
-  <div class="gran-toggle" style="margin-bottom:12px;">
-    <button class="gtab active" id="d-gran-region"  onclick="setDivGran('region')">By region</button>
-    <button class="gtab"        id="d-gran-country" onclick="setDivGran('country')">By country</button>
-  </div>
-  <div class="rtabs" id="d-region-tabs"></div>
-  <div class="row" id="d-stats"></div>
-  <div class="controls">
-    <span class="lbl">View:</span>
-    <div class="gran-toggle">
-      <button class="gtab active" id="d-view-mom"    onclick="setDivView('mom')">m-o-m (col 7)</button>
-      <button class="gtab"        id="d-view-vs2025" onclick="setDivView('vs2025')">vs 2025 avg (col 9)</button>
-    </div>
-    <span id="d-view-desc" style="font-size:11px;color:#aaa;"></span>
-  </div>
+  <div class="rtabs" id="d-ex-tabs"></div>
+  <div class="stat-row" id="d-stats"></div>
   <div class="chart-wrap" id="d-chart-wrap" style="height:400px;">
     <canvas id="divChart" role="img" aria-label="Diverging horizontal bar chart of crude flow changes."></canvas>
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;" id="d-legend-row"></div>
+  <div class="legend-row" id="d-legend-row"></div>
   <p class="note" id="d-note"></p>
 </div>
 
+<!-- WATERFALL PANEL -->
 <div class="panel" id="panel-waterfall">
   <div class="col-info" id="w-col-info"></div>
-  <div class="controls" style="align-items:flex-start;flex-direction:column;gap:6px;">
-    <span class="lbl">Import region:</span>
+  <div class="panel-controls" style="align-items:flex-start;flex-direction:column;gap:6px;">
+    <span class="lbl">Select import group to analyse:</span>
     <div class="rtabs" id="w-im-tabs" style="margin-bottom:0;"></div>
   </div>
-  <div class="controls">
-    <span class="lbl">View:</span>
-    <div class="gran-toggle">
-      <button class="gtab active" id="w-view-vs2025" onclick="setWaterfallView('vs2025')">vs 2025 avg (col 9)</button>
-      <button class="gtab"        id="w-view-mom"    onclick="setWaterfallView('mom')">m-o-m (col 7)</button>
-    </div>
-    <span id="w-view-desc" style="font-size:11px;color:#aaa;"></span>
-  </div>
-  <div class="row" id="w-stats"></div>
+  <div class="stat-row" id="w-stats"></div>
   <div class="chart-wrap" id="w-chart-wrap" style="height:420px;">
-    <canvas id="wfChart" role="img" aria-label="Waterfall chart of crude import changes by export region source."></canvas>
+    <canvas id="wfChart" role="img" aria-label="Waterfall chart of crude flow changes by export group."></canvas>
   </div>
   <div class="legend">
-    <span><span class="sw" style="background:#222;"></span>Base (<span id="w-base-label">prior month</span>)</span>
-    <span style="color:#666;">Steps coloured by export region</span>
-    <span><span class="sw" style="background:#222;"></span><span id="w-final-label">Current month total</span></span>
+    <span><span class="sw" style="background:#222;display:inline-block;border-radius:2px;"></span> Base (<span id="w-base-label">prior month</span>)</span>
+    &nbsp;
+    <span style="color:#666;font-size:11px;">Steps coloured by export group</span>
+    &nbsp;
+    <span><span class="sw" style="background:#222;display:inline-block;border-radius:2px;"></span> <span id="w-final-label">Current month</span></span>
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;" id="w-legend-row"></div>
+  <div class="legend-row" id="w-legend-row" style="margin-top:8px;"></div>
   <p class="note" id="w-note"></p>
 </div>
 
+<!-- SANKEY PANEL -->
+<div class="panel" id="panel-sankey">
+  <div class="col-info" id="s-col-info"></div>
+  <div class="panel-controls" style="margin-bottom:14px;gap:16px;">
+    <div class="ctrl-group">
+      <span class="lbl" style="font-size:12px;color:#666;">Export side:</span>
+      <div class="gran-toggle">
+        <button class="gtab active" id="s-ex-region"  onclick="setSankeyEx('EX_REGION')">IEA Region</button>
+        <button class="gtab"        id="s-ex-tregion" onclick="setSankeyEx('EX_T_REGION')">Trade Region</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <span class="lbl" style="font-size:12px;color:#666;">Import side:</span>
+      <div class="gran-toggle">
+        <button class="gtab active" id="s-im-region"  onclick="setSankeyIm('IM_REGION')">IEA Region</button>
+        <button class="gtab"        id="s-im-tregion" onclick="setSankeyIm('IM_T_REGION')">Trade Region</button>
+      </div>
+    </div>
+    <div class="ctrl-group" style="margin-left:auto;">
+      <span class="lbl" style="font-size:12px;color:#666;">Min flow (kb/d):</span>
+      <input type="range" id="s-threshold" min="0" max="5000" step="100" value="1500" style="width:120px;">
+      <span id="s-threshold-lbl" style="font-size:12px;font-weight:500;color:#1a1a1a;min-width:60px;">1,500</span>
+    </div>
+  </div>
+  <div class="stat-row" id="s-stats"></div>
+  <div id="sankey-wrap" style="width:100%;overflow-x:auto;"></div>
+  <p class="note" id="s-note"></p>
+</div>
+
 <script>
+/* ═══════════════════════════════════════
+   SANKEY STATE
+═══════════════════════════════════════ */
+const SK={
+  exField:'EX_REGION',
+  imField:'IM_REGION',
+  threshold:1500,
+};
+
+document.getElementById('s-threshold').addEventListener('input',function(){
+  SK.threshold=parseInt(this.value)||0;
+  document.getElementById('s-threshold-lbl').textContent=SK.threshold.toLocaleString();
+  renderSankey();
+});
+
+function setSankeyEx(f){
+  SK.exField=f;
+  document.getElementById('s-ex-region').classList.toggle('active', f==='EX_REGION');
+  document.getElementById('s-ex-tregion').classList.toggle('active', f==='EX_T_REGION');
+  renderSankey();
+}
+function setSankeyIm(f){
+  SK.imField=f;
+  document.getElementById('s-im-region').classList.toggle('active', f==='IM_REGION');
+  document.getElementById('s-im-tregion').classList.toggle('active', f==='IM_T_REGION');
+  renderSankey();
+}
+
+/* ═══════════════════════════════════════
+   SANKEY RENDER (pure D3, no plugin)
+═══════════════════════════════════════ */
+function renderSankey(){
+  if(!S.rows.length) return;
+
+  const wrap=document.getElementById('sankey-wrap');
+  wrap.innerHTML='';
+
+  const curDk=dateKey(S.curDate);
+  const rows=getRowsForDate(curDk);
+
+  /* aggregate flows */
+  const flowMap={};
+  rows.forEach(r=>{
+    const ex=r[SK.exField]||'Unknown';
+    const im=r[SK.imField]||'Unknown';
+    const k=ex+'|||'+im;
+    if(!flowMap[k]) flowMap[k]={ex,im,value:0};
+    flowMap[k].value+=r.value;
+  });
+
+  /* filter by threshold */
+  const flows=Object.values(flowMap).filter(f=>f.value>=SK.threshold);
+
+  if(flows.length===0){
+    wrap.innerHTML=`<p style="color:#aaa;font-size:13px;padding:20px 0;">No flows above ${SK.threshold.toLocaleString()} kb/d threshold. Try lowering the slider.</p>`;
+    return;
+  }
+
+  /* stat cards */
+  const totalFlow=flows.reduce((s,f)=>s+f.value,0);
+  const allTotal=rows.reduce((s,r)=>s+r.value,0);
+  document.getElementById('s-stats').innerHTML=`
+    <div class="stat-card"><div class="lbl">${dateLabel(S.curDate)} total (all flows)</div><div class="val">${Math.round(allTotal).toLocaleString()} kb/d</div></div>
+    <div class="stat-card"><div class="lbl">Shown (above threshold)</div><div class="val">${Math.round(totalFlow).toLocaleString()} kb/d</div></div>
+    <div class="stat-card"><div class="lbl">Coverage</div><div class="val">${allTotal>0?Math.round(totalFlow/allTotal*100)+'%':'—'}</div></div>
+    <div class="stat-card"><div class="lbl">Flow corridors shown</div><div class="val">${flows.length}</div></div>`;
+
+  document.getElementById('s-note').textContent=
+    `Flows = VALUE_KBD for ${dateLabel(S.curDate)}. Only corridors ≥ ${SK.threshold.toLocaleString()} kb/d shown. Coloured by export region.`;
+
+  /* unique nodes */
+  const exNodes=[...new Set(flows.map(f=>f.ex))].sort();
+  const imNodes=[...new Set(flows.map(f=>f.im))].sort();
+
+  /* layout constants */
+  const W=Math.max(wrap.clientWidth||900, 700);
+  const nodeW=18;
+  const nodePad=10;
+  const labelPadEx=140;  // space for left labels
+  const labelPadIm=140;  // space for right labels
+  const innerW=W-labelPadEx-labelPadIm-nodeW*2;
+  const exX=labelPadEx;
+  const imX=labelPadEx+nodeW+innerW+nodeW;  // right column x
+  const minH=Math.max(exNodes.length, imNodes.length)*28+80;
+  const H=Math.max(500, minH);
+
+  /* compute node heights proportional to total flow */
+  const exTotals={}, imTotals={};
+  flows.forEach(f=>{
+    exTotals[f.ex]=(exTotals[f.ex]||0)+f.value;
+    imTotals[f.im]=(imTotals[f.im]||0)+f.value;
+  });
+
+  const totalVal=Math.max(...Object.values(exTotals));
+  const availH=H-80;  // usable vertical space
+
+  /* scale: map total flow to pixel height */
+  const scale=v=>(v/totalVal)*availH*0.85;
+
+  /* position ex nodes */
+  const exNodePos={};
+  let yCur=40;
+  exNodes.forEach(n=>{
+    const h=Math.max(8,scale(exTotals[n]||0));
+    exNodePos[n]={y:yCur, h};
+    yCur+=h+nodePad;
+  });
+
+  /* position im nodes */
+  const imNodePos={};
+  yCur=40;
+  imNodes.forEach(n=>{
+    const h=Math.max(8,scale(imTotals[n]||0));
+    imNodePos[n]={y:yCur, h};
+    yCur+=h+nodePad;
+  });
+
+  /* re-scale total height to fit all nodes */
+  const totalExH=yCur;
+  const totalH=Math.max(H, totalExH+40);
+
+  /* sort flows: within each ex node, sort by im value desc */
+  flows.sort((a,b)=>b.value-a.value);
+
+  /* track offsets within each node for stacking ribbons */
+  const exOffset={}, imOffset={};
+  exNodes.forEach(n=>exOffset[n]=0);
+  imNodes.forEach(n=>imOffset[n]=0);
+
+  /* build SVG */
+  const svg=d3.select(wrap).append('svg')
+    .attr('width','100%')
+    .attr('viewBox',`0 0 ${W} ${totalH}`)
+    .attr('preserveAspectRatio','xMidYMid meet')
+    .style('font-family','-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif');
+
+  /* draw ribbons first (behind nodes) */
+  const ribbonG=svg.append('g').attr('class','ribbons');
+
+  flows.forEach(f=>{
+    const exP=exNodePos[f.ex];
+    const imP=imNodePos[f.im];
+    if(!exP||!imP) return;
+
+    const flowH=Math.max(1,scale(f.value));
+    const exY0=exP.y+exOffset[f.ex];
+    const imY0=imP.y+imOffset[f.im];
+    const x0=exX+nodeW;
+    const x1=imX;
+
+    /* bezier control points */
+    const cx=labelPadEx+nodeW+(innerW/2);
+
+    const path=`
+      M ${x0} ${exY0}
+      C ${cx} ${exY0}, ${cx} ${imY0}, ${x1} ${imY0}
+      L ${x1} ${imY0+flowH}
+      C ${cx} ${imY0+flowH}, ${cx} ${exY0+flowH}, ${x0} ${exY0+flowH}
+      Z
+    `;
+
+    const col=rColor(f.ex);
+
+    ribbonG.append('path')
+      .attr('d',path)
+      .attr('fill',col)
+      .attr('fill-opacity',0.35)
+      .attr('stroke',col)
+      .attr('stroke-opacity',0.5)
+      .attr('stroke-width',0.5)
+      .on('mouseover',function(event){
+        d3.select(this).attr('fill-opacity',0.65).attr('stroke-opacity',0.9);
+        /* tooltip */
+        const tip=document.getElementById('s-tooltip');
+        tip.style.display='block';
+        tip.innerHTML=`<div style="font-weight:500;margin-bottom:4px;">${f.ex} → ${f.im}</div><div style="color:#888;">${Math.round(f.value).toLocaleString()} kb/d</div>`;
+        tip.style.left=(event.offsetX+16)+'px';
+        tip.style.top=(event.offsetY-10)+'px';
+      })
+      .on('mouseout',function(){
+        d3.select(this).attr('fill-opacity',0.35).attr('stroke-opacity',0.5);
+        document.getElementById('s-tooltip').style.display='none';
+      });
+
+    exOffset[f.ex]+=flowH;
+    imOffset[f.im]+=flowH;
+  });
+
+  /* draw ex nodes */
+  exNodes.forEach(n=>{
+    const p=exNodePos[n];
+    const col=rColor(n);
+    svg.append('rect')
+      .attr('x',exX).attr('y',p.y)
+      .attr('width',nodeW).attr('height',p.h)
+      .attr('fill',col).attr('rx',3);
+    /* label left of node */
+    svg.append('text')
+      .attr('x',exX-8).attr('y',p.y+p.h/2)
+      .attr('text-anchor','end').attr('dominant-baseline','middle')
+      .attr('font-size',11).attr('fill','#444').attr('font-weight','500')
+      .text(n);
+    /* value below label */
+    svg.append('text')
+      .attr('x',exX-8).attr('y',p.y+p.h/2+13)
+      .attr('text-anchor','end').attr('dominant-baseline','middle')
+      .attr('font-size',10).attr('fill','#aaa')
+      .text(Math.round(exTotals[n]).toLocaleString()+' kb/d');
+  });
+
+  /* draw im nodes */
+  imNodes.forEach(n=>{
+    const p=imNodePos[n];
+    const col=rColor(n);
+    svg.append('rect')
+      .attr('x',imX).attr('y',p.y)
+      .attr('width',nodeW).attr('height',p.h)
+      .attr('fill',col).attr('rx',3);
+    /* label right of node */
+    svg.append('text')
+      .attr('x',imX+nodeW+8).attr('y',p.y+p.h/2)
+      .attr('text-anchor','start').attr('dominant-baseline','middle')
+      .attr('font-size',11).attr('fill','#444').attr('font-weight','500')
+      .text(n);
+    svg.append('text')
+      .attr('x',imX+nodeW+8).attr('y',p.y+p.h/2+13)
+      .attr('text-anchor','start').attr('dominant-baseline','middle')
+      .attr('font-size',10).attr('fill','#aaa')
+      .text(Math.round(imTotals[n]).toLocaleString()+' kb/d');
+  });
+
+  /* column headers */
+  svg.append('text').attr('x',exX+nodeW/2).attr('y',20)
+    .attr('text-anchor','middle').attr('font-size',12).attr('font-weight','500').attr('fill','#666')
+    .text(SK.exField==='EX_REGION'?'IEA Export Region':'Export Trade Region');
+  svg.append('text').attr('x',imX+nodeW/2).attr('y',20)
+    .attr('text-anchor','middle').attr('font-size',12).attr('font-weight','500').attr('fill','#666')
+    .text(SK.imField==='IM_REGION'?'IEA Import Region':'Import Trade Region');
+}
+
+/* tooltip element for sankey */
+(function(){
+  const tip=document.createElement('div');
+  tip.id='s-tooltip';
+  tip.style.cssText='display:none;position:absolute;background:#fff;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;padding:9px 13px;font-size:12px;pointer-events:none;z-index:10;max-width:220px;box-shadow:0 2px 8px rgba(0,0,0,0.07);';
+  document.getElementById('sankey-wrap').parentNode.insertBefore(tip,document.getElementById('sankey-wrap'));
+})();
+
+/* hook sankey into renderAll */
+const _origRenderAll=renderAll;
+window.renderAll=function(){
+  _origRenderAll();
+  renderSankey();
+};
+</script>
 const REGION_COLORS={
   "Africa":"#02889E","Eurasia":"#644875","Middle East":"#FFBD02",
   "NON-OECD Americas":"#01A93E","OECD Americas":"#81CFE1",
   "OECD Asia Oceania":"#EA7B1A","OECD Europe":"#D14648",
-  "Other Asia":"#B59FCA","Unknown Origin":"#7F7F7F","Unknown":"#BFBFBF"
+  "Other Asia":"#B59FCA","Unknown Origin":"#7F7F7F","Unknown":"#BFBFBF",
+  "NAM":"#81CFE1","ME":"#FFBD02","Latam":"#01A93E","Russia":"#644875"
 };
 const PALETTE=["#02889E","#644875","#FFBD02","#01A93E","#81CFE1","#EA7B1A","#D14648","#B59FCA","#7F7F7F","#BFBFBF","#02889E","#644875"];
 const _xc={};
 function rColor(r){if(REGION_COLORS[r])return REGION_COLORS[r];if(!_xc[r])_xc[r]=PALETTE[Object.keys(_xc).length%PALETTE.length];return _xc[r];}
 const fmtKbd=v=>(v>0?'+':'')+Math.round(v).toLocaleString()+' kb/d';
+const fmtN=v=>Math.round(v).toLocaleString()+' kb/d';
 
-const S={month1:'Feb 2026',month2:'Mar 2026',rows:[],aggRegion:[],aggCountry:[],exRegions:[],imRegions:[],exCountries:[],activeKey:'Middle East',activeImKey:'Other Asia',bubbleGran:'region',divGran:'region',divView:'mom',wfView:'vs2025'};
-let bChart=null,dChart=null,wChart=null;
-const COL={exRegion:0,exCountry:1,imRegion:2,imCountry:3,vol1:4,vol2:5,mom:6,avg2025:7,vsAvg:8};
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+const S={
+  rows:[],          // all parsed rows
+  dates:[],         // sorted unique dates
+  curDate:null,     // selected current month (Date object)
+  priorDate:null,   // auto = curDate - 1 month
+  view:'mom',       // 'mom' | 'avg'
+  exGran:'EX_REGION',
+  imGran:'IM_REGION',
+  activeExKey:null,
+  activeImKey:null,
+};
+let bChart=null, dChart=null, wChart=null;
 
-function parseDateLabel(raw){
-  if(!raw&&raw!==0)return '';
-  if(typeof raw==='number'&&raw>40000){try{const d=XLSX.SSF.parse_date_code(raw);return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.m-1]+' '+d.y;}catch(e){}}
-  const s=String(raw).trim();const m=s.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
-  if(m){const mon=parseInt(m[2],10);if(mon>=1&&mon<=12)return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mon-1]+' '+m[3];}
-  return s;
+/* column name → index map (built after parse) */
+let COL={};
+
+/* ═══════════════════════════════════════
+   PARSE DATE  (handles Excel serial, DD-MM-YYYY, YYYY-MM-DD, etc.)
+═══════════════════════════════════════ */
+function parseDate(raw){
+  if(!raw&&raw!==0) return null;
+  if(typeof raw==='number'&&raw>40000){
+    try{
+      const d=XLSX.SSF.parse_date_code(raw);
+      return new Date(d.y,d.m-1,1);
+    }catch(e){}
+  }
+  const s=String(raw).trim();
+  // DD-MM-YYYY or DD/MM/YYYY
+  let m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+  if(m) return new Date(parseInt(m[3]),parseInt(m[2])-1,1);
+  // YYYY-MM-DD
+  m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if(m) return new Date(parseInt(m[1]),parseInt(m[2])-1,1);
+  // MMM-YY or MMM YYYY
+  m=s.match(/^([A-Za-z]{3})[-\s](\d{2,4})$/);
+  if(m){
+    const months={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    const mo=months[m[1].toLowerCase()];
+    if(mo!==undefined){
+      let yr=parseInt(m[2]);if(yr<100)yr+=2000;
+      return new Date(yr,mo,1);
+    }
+  }
+  const d=new Date(s);
+  return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),1);
 }
 
+function dateKey(d){ return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`:'';}
+function dateLabel(d){
+  if(!d) return '';
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear();
+}
+function priorMonth(d){
+  if(!d) return null;
+  return new Date(d.getFullYear(), d.getMonth()-1, 1);
+}
+
+/* ═══════════════════════════════════════
+   FILE UPLOAD + PARSE
+═══════════════════════════════════════ */
 function processRawData(buf,filename){
-  const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
+  const wb=XLSX.read(buf,{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
   const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  let hi=-1;for(let i=0;i<Math.min(15,raw.length);i++){if(raw[i].some(c=>String(c||'').trim().toUpperCase()==='EX_REGION')){hi=i;break;}}
-  if(hi<0){setStatus('Header row not found.','err');return;}
+
+  // find header row
+  let hi=-1;
+  for(let i=0;i<Math.min(15,raw.length);i++){
+    if(raw[i].some(c=>String(c||'').trim().toUpperCase()==='EX_COUNTRY')){hi=i;break;}
+  }
+  if(hi<0){setStatus('Header row not found — need EX_COUNTRY column.','err');return;}
+
   const headers=raw[hi].map(c=>String(c||'').trim());
-  if(headers.length<9){setStatus(`Only ${headers.length} columns.`,'err');return;}
-  const m1=parseDateLabel(headers[COL.vol1]),m2=parseDateLabel(headers[COL.vol2]);
-  const vsLbl=headers[COL.vsAvg]||'vs 2025',avgLbl=headers[COL.avg2025]||'2025 Average';
+
+  // build column index map (case-insensitive, normalise spaces/dashes)
+  COL={};
+  const normalise=s=>s.toLowerCase().replace(/[\s\-_]+/g,'');
+  headers.forEach((h,i)=>{ COL[normalise(h)]=i; });
+
+  // helper to get col index by name
+  function ci(name){
+    const k=normalise(name);
+    if(COL[k]!==undefined) return COL[k];
+    // try partial match
+    const found=Object.keys(COL).find(k2=>k2.includes(k)||k.includes(k2));
+    return found!==undefined?COL[found]:-1;
+  }
+
+  const iExCountry  = ci('EX_COUNTRY');
+  const iExRegion   = ci('EX_REGION');
+  const iExDef      = ci('EX_Def_Region');
+  const iExT        = ci('EX_T_REGION');
+  const iImCountry  = ci('IM_COUNTRY');
+  const iImRegion   = ci('IM_REGION');
+  const iImT        = ci('IM_T_REGION');
+  const iImDef      = ci('IM_Def_Region');
+  const iDate       = ci('DATE');
+  const iPrevYr     = ci('PREV_YR');
+  const iValue      = ci('VALUE_KBD');
+  const iPrevYrAvg  = ci('PREV_YR_AVG');
+  const iMom        = ci('Change m-o-m');
+  const iVsAvg      = ci('Change vs Annual Average');
+
+  const missing=[];
+  if(iExCountry<0) missing.push('EX_COUNTRY');
+  if(iDate<0)      missing.push('DATE');
+  if(iValue<0)     missing.push('VALUE_KBD');
+  if(missing.length){setStatus('Missing columns: '+missing.join(', '),'err');return;}
+
   const parsed=[];
   for(let i=hi+1;i<raw.length;i++){
-    const r=raw[i];const exR=String(r[COL.exRegion]||'').trim();const imR=String(r[COL.imRegion]||'').trim();
-    if(!exR||exR.toUpperCase()==='EX_REGION'||!imR)continue;
-    parsed.push({exRegion:exR,exCountry:String(r[COL.exCountry]||'').trim()||exR,imRegion:imR,imCountry:String(r[COL.imCountry]||'').trim()||imR,vol1:parseFloat(r[COL.vol1])||0,vol2:parseFloat(r[COL.vol2])||0,mom:parseFloat(r[COL.mom])||0,avg2025:parseFloat(r[COL.avg2025])||0,vsAvg:parseFloat(r[COL.vsAvg])||0});
+    const r=raw[i];
+    const exC=String(r[iExCountry]||'').trim();
+    if(!exC||exC.toUpperCase()==='EX_COUNTRY') continue;
+    const dt=parseDate(r[iDate]);
+    if(!dt) continue;
+    const val=parseFloat(r[iValue])||0;
+    parsed.push({
+      EX_COUNTRY:  exC,
+      EX_REGION:   String(r[iExRegion]  ||'').trim()||exC,
+      EX_Def_Region:String(r[iExDef]   ||'').trim()||exC,
+      EX_T_REGION: String(r[iExT]       ||'').trim()||exC,
+      IM_COUNTRY:  String(r[iImCountry] ||'').trim(),
+      IM_REGION:   String(r[iImRegion]  ||'').trim(),
+      IM_T_REGION: String(r[iImT]       ||'').trim(),
+      IM_Def_Region:String(r[iImDef]    ||'').trim(),
+      date:        dt,
+      dateKey:     dateKey(dt),
+      prevYr:      parseInt(r[iPrevYr])||0,
+      value:       val,
+      prevYrAvg:   parseFloat(r[iPrevYrAvg])||0,
+      mom:         parseFloat(r[iMom])||0,
+      vsAvg:       parseFloat(r[iVsAvg])||0,
+    });
   }
+
   if(parsed.length===0){setStatus('No data rows found.','err');return;}
-  const info=`<strong>Columns detected:</strong> <span class="col-pill">col5=${m1}</span><span class="col-pill">col6=${m2}</span><span class="col-pill">col7=m-o-m</span><span class="col-pill">col8=${avgLbl}</span><span class="col-pill">col9=${vsLbl}</span> &nbsp;${parsed.length} rows`;
-  ['b-col-info','d-col-info','w-col-info'].forEach(id=>{document.getElementById(id).innerHTML=info;document.getElementById(id).style.display='block';});
-  S.month1=m1||'Prior month';S.month2=m2||'Current month';
-  document.getElementById('period-lbl').textContent=`— ${S.month1} vs ${S.month2}`;
+
+  // detect unique dates, sort ascending
+  const dateMap={};
+  parsed.forEach(d=>{if(!dateMap[d.dateKey])dateMap[d.dateKey]=d.date;});
+  const sortedDates=Object.values(dateMap).sort((a,b)=>a-b);
+
+  S.rows=parsed;
+  S.dates=sortedDates;
+
+  // default current month = latest date in file
+  S.curDate=sortedDates[sortedDates.length-1];
+  S.priorDate=priorMonth(S.curDate);
+
+  // show col info
+  const info=`<strong>Loaded:</strong> ${filename} — <span class="col-pill">${parsed.length} rows</span> <span class="col-pill">${sortedDates.length} months</span> <span class="col-pill">${dateLabel(sortedDates[0])} → ${dateLabel(sortedDates[sortedDates.length-1])}</span>`;
+  ['b-col-info','d-col-info','w-col-info','s-col-info'].forEach(id=>{document.getElementById(id).innerHTML=info;document.getElementById(id).style.display='block';});
+
   setStatus(`Loaded: ${filename} — ${parsed.length} rows`,'ok');
-  destroyAll();initData(parsed);
+  buildMonthPicker();
+  buildFilterDropdowns();
+  buildExTabs();
+  buildWfTabs();
+  buildLegends();
+  renderAll();
 }
 
 document.getElementById('file-input').addEventListener('change',function(e){
   const file=e.target.files&&e.target.files[0];if(!file)return;
-  setStatus('Reading…','');const reader=new FileReader();
-  reader.onload=function(ev){try{processRawData(ev.target.result,file.name);}catch(err){setStatus('Error: '+err.message,'err');console.error(err);}};
+  setStatus('Reading…','');
+  const reader=new FileReader();
+  reader.onload=ev=>{try{processRawData(ev.target.result,file.name);}catch(err){setStatus('Error: '+err.message,'err');console.error(err);}};
   reader.readAsArrayBuffer(file);
 });
 
 function setStatus(msg,type){const el=document.getElementById('status-msg');el.textContent=msg;el.className='status'+(type?' '+type:'');}
 function destroyAll(){if(bChart){bChart.destroy();bChart=null;}if(dChart){dChart.destroy();dChart=null;}if(wChart){wChart.destroy();wChart=null;}}
 
-function aggBy(rows,keyFn){
+/* ═══════════════════════════════════════
+   MONTH PICKER
+═══════════════════════════════════════ */
+function buildMonthPicker(){
+  const sel=document.getElementById('sel-month');
+  sel.innerHTML='';
+  S.dates.slice().reverse().forEach(d=>{
+    const o=document.createElement('option');
+    o.value=dateKey(d); o.textContent=dateLabel(d);
+    if(dateKey(d)===dateKey(S.curDate)) o.selected=true;
+    sel.appendChild(o);
+  });
+  updatePriorLabel();
+  sel.onchange=()=>{
+    const dk=sel.value;
+    S.curDate=S.dates.find(d=>dateKey(d)===dk)||S.curDate;
+    S.priorDate=priorMonth(S.curDate);
+    updatePriorLabel();
+    destroyAll(); renderAll();
+  };
+}
+
+function updatePriorLabel(){
+  const lbl=document.getElementById('prior-month-lbl');
+  document.getElementById('period-lbl').textContent=S.curDate?`— ${dateLabel(S.priorDate)||'n/a'} vs ${dateLabel(S.curDate)}`:'';
+  if(lbl) lbl.textContent=dateLabel(S.priorDate)||'n/a';
+  const wbl=document.getElementById('w-base-label');
+  const wfl=document.getElementById('w-final-label');
+  if(wbl) wbl.textContent=S.view==='mom'?(dateLabel(S.priorDate)||'prior month'):'Annual avg';
+  if(wfl) wfl.textContent=dateLabel(S.curDate)||'current month';
+}
+
+/* ═══════════════════════════════════════
+   VIEW TOGGLE
+═══════════════════════════════════════ */
+function setView(v){
+  S.view=v;
+  document.getElementById('vt-mom').classList.toggle('active',v==='mom');
+  document.getElementById('vt-avg').classList.toggle('active',v==='avg');
+  updatePriorLabel();
+  destroyAll(); renderAll();
+}
+
+/* ═══════════════════════════════════════
+   GRAN SELECTORS
+═══════════════════════════════════════ */
+document.getElementById('sel-ex-gran').onchange=function(){S.exGran=this.value;buildExTabs();buildWfTabs();buildFilterDropdowns();buildLegends();destroyAll();renderAll();};
+document.getElementById('sel-im-gran').onchange=function(){S.imGran=this.value;buildWfTabs();buildFilterDropdowns();buildLegends();destroyAll();renderAll();};
+
+/* ═══════════════════════════════════════
+   AGGREGATION
+   For a given date filter, group by exKey+imKey and sum value/mom/vsAvg
+   For prevYrAvg: compute mean (not sum)
+═══════════════════════════════════════ */
+function getRowsForDate(dk){return S.rows.filter(r=>r.dateKey===dk);}
+
+function aggRows(rows, exField, imField){
   const map={};
-  rows.forEach(d=>{const k=keyFn(d);if(!map[k])map[k]={ex:k.split('|||')[0],im:k.split('|||')[1],vol1:0,vol2:0,mom:0,avg2025:0,vsAvg:0};map[k].vol1+=d.vol1;map[k].vol2+=d.vol2;map[k].mom+=d.mom;map[k].avg2025+=d.avg2025;map[k].vsAvg+=d.vsAvg;});
+  rows.forEach(r=>{
+    const ex=r[exField]||'Unknown';
+    const im=r[imField]||'Unknown';
+    const k=ex+'|||'+im;
+    if(!map[k]) map[k]={ex,im,value:0,mom:0,vsAvg:0,prevYrAvgSum:0,prevYrAvgCount:0};
+    map[k].value      +=r.value;
+    map[k].mom        +=r.mom;
+    map[k].vsAvg      +=r.vsAvg;
+    map[k].prevYrAvgSum+=r.prevYrAvg;
+    map[k].prevYrAvgCount+=1;
+  });
+  return Object.values(map).map(d=>({
+    ...d,
+    prevYrAvg: d.prevYrAvgCount>0 ? d.prevYrAvgSum/d.prevYrAvgCount : 0
+  }));
+}
+
+function aggByEx(rows, exField){
+  const map={};
+  rows.forEach(r=>{
+    const ex=r[exField]||'Unknown';
+    if(!map[ex]) map[ex]={ex,value:0,mom:0,vsAvg:0};
+    map[ex].value +=r.value;
+    map[ex].mom   +=r.mom;
+    map[ex].vsAvg +=r.vsAvg;
+  });
   return Object.values(map);
 }
 
-function initData(rows){
-  S.rows=rows;S.aggRegion=aggBy(rows,d=>d.exRegion+'|||'+d.imRegion);S.aggCountry=aggBy(rows,d=>d.exCountry+'|||'+d.imCountry);
-  S.exRegions=[...new Set(rows.map(d=>d.exRegion))].sort();S.imRegions=[...new Set(rows.map(d=>d.imRegion))].sort();S.exCountries=[...new Set(rows.map(d=>d.exCountry))].sort();
-  if(!S.exRegions.includes(S.activeKey))S.activeKey=S.exRegions[0]||'';
-  if(!S.imRegions.includes(S.activeImKey))S.activeImKey=S.imRegions[0]||'';
-  buildBubbleControls();buildDivTabs();buildWaterfallTabs();
-  buildRegionLegend('w-legend-row',S.exRegions);
-  updateBubble();renderDivAll();renderWaterfall();
-}
-
-function switchTab(name,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));el.classList.add('active');document.getElementById('panel-'+name).classList.add('active');}
-
-function buildRegionLegend(elId,regions){
-  const el=document.getElementById(elId);if(!el)return;el.innerHTML='';
-  regions.forEach(r=>{const s=document.createElement('span');s.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;color:#666;';s.innerHTML=`<span style="width:9px;height:9px;border-radius:2px;background:${rColor(r)};display:inline-block;"></span>${r}`;el.appendChild(s);});
-}
-
-/* ── BUBBLE ── */
-function buildBubbleControls(){
-  ['b-ex-region','b-im-region'].forEach((id,idx)=>{
-    const sel=document.getElementById(id);sel.innerHTML=`<option value="all">All ${idx?'import':'export'} regions</option>`;
-    (idx?S.imRegions:S.exRegions).forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o);});sel.onchange=updateBubble;
+function aggByIm(rows, imField){
+  const map={};
+  rows.forEach(r=>{
+    const im=r[imField]||'Unknown';
+    if(!map[im]) map[im]={im,value:0,mom:0,vsAvg:0,prevYrAvgSum:0,cnt:0};
+    map[im].value      +=r.value;
+    map[im].mom        +=r.mom;
+    map[im].vsAvg      +=r.vsAvg;
+    map[im].prevYrAvgSum+=r.prevYrAvg;
+    map[im].cnt        +=1;
   });
-  const leg=document.getElementById('b-legend');leg.innerHTML='';
-  S.exRegions.forEach(r=>{const s=document.createElement('span');s.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;color:#666;cursor:pointer;';s.innerHTML=`<span style="width:9px;height:9px;border-radius:50%;background:${rColor(r)};display:inline-block;opacity:0.9;"></span>${r}`;s.onclick=()=>{document.getElementById('b-ex-region').value=r;updateBubble();};leg.appendChild(s);});
-}
-function setBubbleGran(g){S.bubbleGran=g;document.getElementById('b-gran-region').classList.toggle('active',g==='region');document.getElementById('b-gran-country').classList.toggle('active',g==='country');if(bChart){bChart.destroy();bChart=null;}updateBubble();}
-function updateBubble(){
-  const exF=document.getElementById('b-ex-region').value,imF=document.getElementById('b-im-region').value,isCtry=S.bubbleGran==='country';
-  let data=isCtry?S.aggCountry:S.aggRegion;
-  if(exF!=='all'){if(isCtry){const ok=new Set(S.rows.filter(d=>d.exRegion===exF).map(d=>d.exCountry));data=data.filter(d=>ok.has(d.ex));}else data=data.filter(d=>d.ex===exF);}
-  if(imF!=='all'){if(isCtry){const ok=new Set(S.rows.filter(d=>d.imRegion===imF).map(d=>d.imCountry));data=data.filter(d=>ok.has(d.im));}else data=data.filter(d=>d.im===imF);}
-  const tv1=data.reduce((s,d)=>s+d.vol1,0),tv2=data.reduce((s,d)=>s+d.vol2,0),totMom=data.reduce((s,d)=>s+d.mom,0),totAvg=data.reduce((s,d)=>s+d.avg2025,0),totVsAvg=data.reduce((s,d)=>s+d.vsAvg,0),shrink=data.filter(d=>d.mom<0).length;
-  document.getElementById('b-stats').innerHTML=`<div class="stat-card"><div class="lbl">${S.month1} total (col 5)</div><div class="val">${Math.round(tv1).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">${S.month2} total (col 6)</div><div class="val">${Math.round(tv2).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">m-o-m (col 7)</div><div class="val" style="color:${totMom<0?'#E24B4A':'#1D9E75'}">${fmtKbd(totMom)}</div></div><div class="stat-card"><div class="lbl">2025 avg (col 8)</div><div class="val">${Math.round(totAvg).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">vs 2025 avg (col 9)</div><div class="val" style="color:${totVsAvg<0?'#E24B4A':'#1D9E75'}">${fmtKbd(totVsAvg)}</div></div><div class="stat-card"><div class="lbl">Corridors shrinking</div><div class="val">${shrink} / ${data.length}</div></div>`;
-  document.getElementById('b-note').textContent=`${isCtry?'Country':'Region'}-level corridors. X=${S.month1}, Y=${S.month2}. Bubble size=|m-o-m|.`;
-  const maxV=Math.max(...data.map(d=>Math.max(d.vol1,d.vol2)),100),pad=maxV*0.1;
-  const ckMap={};if(isCtry)S.rows.forEach(d=>{ckMap[d.exCountry]=d.exRegion;});
-  const byColor={};data.forEach(d=>{const ck=isCtry?(ckMap[d.ex]||d.ex):d.ex;if(!byColor[ck])byColor[ck]=[];byColor[ck].push(d);});
-  const datasets=Object.entries(byColor).map(([ck,pts])=>({label:ck,data:pts.map(d=>({x:Math.round(d.vol1),y:Math.round(d.vol2),r:Math.max(3,Math.sqrt(Math.abs(d.mom))*0.85),_d:d})),backgroundColor:rColor(ck)+'aa',borderColor:rColor(ck),borderWidth:1}));
-  const ctx=document.getElementById('bubbleChart').getContext('2d');
-  if(bChart){bChart.data.datasets=datasets;bChart.options.scales.x.min=-pad;bChart.options.scales.x.max=maxV+pad;bChart.options.scales.y.min=-pad;bChart.options.scales.y.max=maxV+pad;bChart.options.scales.x.title.text=S.month1+' (kb/d)';bChart.options.scales.y.title.text=S.month2+' (kb/d)';bChart.update();return;}
-  bChart=new Chart(ctx,{type:'bubble',data:{datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:16},plugins:{legend:{display:false},tooltip:{enabled:false,external(ctx2){const box=document.getElementById('b-tooltip');if(ctx2.tooltip.opacity===0){box.style.display='none';return;}const d=ctx2.tooltip.dataPoints[0].raw._d;box.innerHTML=`<div style="font-weight:500;font-size:13px;margin-bottom:6px;">${d.ex} → ${d.im}</div><div style="color:#888;margin-bottom:2px;">${S.month1}: <b>${Math.round(d.vol1).toLocaleString()} kb/d</b></div><div style="color:#888;margin-bottom:2px;">${S.month2}: <b>${Math.round(d.vol2).toLocaleString()} kb/d</b></div><div style="color:${d.mom<0?'#E24B4A':'#1D9E75'};font-weight:500;margin-top:4px;">m-o-m: ${fmtKbd(d.mom)}</div><div style="color:#aaa;font-size:11px;margin-top:2px;">vs 2025 avg: ${fmtKbd(d.vsAvg)}</div>`;box.style.display='block';box.style.left=(ctx2.tooltip.caretX+14)+'px';box.style.top=(ctx2.tooltip.caretY-10)+'px';}}},scales:{x:{min:-pad,max:maxV+pad,title:{display:true,text:S.month1+' (kb/d)',color:'#888',font:{size:11}},grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>v>=0?Math.round(v).toLocaleString():''}},y:{min:-pad,max:maxV+pad,title:{display:true,text:S.month2+' (kb/d)',color:'#888',font:{size:11}},grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>v>=0?Math.round(v).toLocaleString():''}}}},plugins:[{id:'diag',beforeDraw(ch){const{ctx:c,scales:{x,y}}=ch;c.save();c.strokeStyle='rgba(136,135,128,0.3)';c.lineWidth=1;c.setLineDash([5,4]);c.beginPath();c.moveTo(x.getPixelForValue(0),y.getPixelForValue(0));c.lineTo(x.getPixelForValue(x.max),y.getPixelForValue(x.max));c.stroke();c.setLineDash([]);c.fillStyle='rgba(136,135,128,0.45)';c.font='10px sans-serif';c.fillText('no change',x.getPixelForValue(x.max*0.72),y.getPixelForValue(x.max*0.78));c.restore();}},{id:'bubblelabels',afterDatasetsDraw(ch){const{ctx:c,scales:{x,y}}=ch;c.save();c.font='500 9px sans-serif';c.textAlign='left';c.textBaseline='middle';ch.data.datasets.forEach(ds=>{ds.data.forEach(pt=>{if(!pt._d)return;const xp=x.getPixelForValue(pt.x),yp=y.getPixelForValue(pt.y),r=pt.r||4;c.fillStyle='rgba(40,40,40,0.72)';c.fillText(pt._d.im,xp+r+3,yp);});});c.restore();}}]});
+  return Object.values(map).map(d=>({...d, prevYrAvg:d.cnt>0?d.prevYrAvgSum/d.cnt:0}));
 }
 
-/* ── DIVERGING BARS ── */
-function divKeys(){return S.divGran==='region'?S.exRegions:[...new Set(S.rows.map(d=>d.exCountry))].sort();}
-function buildDivTabs(){const el=document.getElementById('d-region-tabs');el.innerHTML='';divKeys().forEach(k=>{const btn=document.createElement('button');btn.className='rtab';btn.textContent=k;btn.dataset.key=k;btn.onclick=()=>{S.activeKey=k;renderDivAll();};el.appendChild(btn);});}
-function setDivGran(g){S.divGran=g;document.getElementById('d-gran-region').classList.toggle('active',g==='region');document.getElementById('d-gran-country').classList.toggle('active',g==='country');const keys=divKeys();if(!keys.includes(S.activeKey))S.activeKey=keys[0]||'';buildDivTabs();if(dChart){dChart.destroy();dChart=null;}renderDivAll();}
-function setDivView(v){S.divView=v;document.getElementById('d-view-mom').classList.toggle('active',v==='mom');document.getElementById('d-view-vs2025').classList.toggle('active',v==='vs2025');if(dChart){dChart.destroy();dChart=null;}renderDivAll();}
-function updateDivTabStyles(){document.querySelectorAll('#d-region-tabs .rtab').forEach(b=>{const active=b.dataset.key===S.activeKey;const c=rColor(S.divGran==='region'?S.activeKey:(S.rows.find(d=>d.exCountry===S.activeKey)||{}).exRegion||S.activeKey);b.style.background=active?c:'#fff';b.style.color=active?'#fff':'#666';b.style.borderColor=active?c:'rgba(0,0,0,0.18)';b.style.fontWeight=active?'500':'400';});}
-function renderDivAll(){
-  updateDivTabStyles();const isMom=S.divView==='mom';
-  let rows;if(S.divGran==='region')rows=S.aggRegion.filter(d=>d.ex===S.activeKey);else rows=aggBy(S.rows.filter(d=>d.exCountry===S.activeKey),d=>d.exCountry+'|||'+d.imCountry);
-  const totMom=rows.reduce((s,d)=>s+d.mom,0),totVsAvg=rows.reduce((s,d)=>s+d.vsAvg,0),totVol2=rows.reduce((s,d)=>s+d.vol2,0),totAvg=rows.reduce((s,d)=>s+d.avg2025,0);
-  const nDown=rows.filter(d=>(isMom?d.mom:d.vsAvg)<0).length,nUp=rows.filter(d=>(isMom?d.mom:d.vsAvg)>0).length;
-  document.getElementById('d-stats').innerHTML=`<div class="stat-card"><div class="lbl">m-o-m (${S.month2})</div><div class="val" style="color:${totMom<0?'#E24B4A':'#1D9E75'}">${fmtKbd(totMom)}</div></div><div class="stat-card"><div class="lbl">${S.month2} total</div><div class="val">${Math.round(totVol2).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">2025 avg total</div><div class="val">${Math.round(totAvg).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">vs 2025 avg</div><div class="val" style="color:${totVsAvg<0?'#E24B4A':'#1D9E75'}">${fmtKbd(totVsAvg)}</div></div><div class="stat-card"><div class="lbl">Corridors ${isMom?'declining':'below 2025'}</div><div class="val">${nDown}</div></div><div class="stat-card"><div class="lbl">Corridors ${isMom?'growing':'above 2025'}</div><div class="val" style="color:#1D9E75">${nUp}</div></div>`;
-  const sorted=[...rows].sort((a,b)=>isMom?a.mom-b.mom:a.vsAvg-b.vsAvg);
+/* ═══════════════════════════════════════
+   FILTER DROPDOWNS (bubble panel)
+═══════════════════════════════════════ */
+function buildFilterDropdowns(){
+  const exVals=[...new Set(S.rows.map(r=>r[S.exGran]))].filter(Boolean).sort();
+  const imVals=[...new Set(S.rows.map(r=>r[S.imGran]))].filter(Boolean).sort();
+  ['b-ex-filter','b-im-filter'].forEach((id,idx)=>{
+    const sel=document.getElementById(id);
+    const prev=sel.value;
+    sel.innerHTML=`<option value="all">All ${idx?'import':'export'}</option>`;
+    (idx?imVals:exVals).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+    if(prev&&prev!=='all') sel.value=prev;
+    sel.onchange=()=>{destroyAll();renderAll();};
+  });
+}
+
+/* ═══════════════════════════════════════
+   EX TABS (diverging panel)
+═══════════════════════════════════════ */
+function buildExTabs(){
+  const el=document.getElementById('d-ex-tabs');el.innerHTML='';
+  const exVals=[...new Set(S.rows.map(r=>r[S.exGran]))].filter(Boolean).sort();
+  if(!S.activeExKey||!exVals.includes(S.activeExKey)) S.activeExKey=exVals[0]||'';
+  exVals.forEach(k=>{
+    const btn=document.createElement('button');btn.className='rtab';btn.textContent=k;btn.dataset.key=k;
+    btn.onclick=()=>{S.activeExKey=k;updateExTabStyles();destroyAll();renderAll();};
+    el.appendChild(btn);
+  });
+  updateExTabStyles();
+}
+function updateExTabStyles(){
+  document.querySelectorAll('#d-ex-tabs .rtab').forEach(b=>{
+    const active=b.dataset.key===S.activeExKey;
+    const c=rColor(S.activeExKey);
+    b.style.background=active?c:'#fff';b.style.color=active?'#fff':'#666';
+    b.style.borderColor=active?c:'rgba(0,0,0,0.18)';b.style.fontWeight=active?'500':'400';
+  });
+}
+
+/* ═══════════════════════════════════════
+   WF IM TABS
+═══════════════════════════════════════ */
+function buildWfTabs(){
+  const el=document.getElementById('w-im-tabs');el.innerHTML='';
+  const imVals=[...new Set(S.rows.map(r=>r[S.imGran]))].filter(Boolean).sort();
+  if(!S.activeImKey||!imVals.includes(S.activeImKey)) S.activeImKey=imVals[0]||'';
+  imVals.forEach(k=>{
+    const btn=document.createElement('button');btn.className='rtab';btn.textContent=k;btn.dataset.key=k;
+    btn.onclick=()=>{S.activeImKey=k;updateWfTabStyles();destroyAll();renderAll();};
+    el.appendChild(btn);
+  });
+  updateWfTabStyles();
+}
+function updateWfTabStyles(){
+  document.querySelectorAll('#w-im-tabs .rtab').forEach(b=>{
+    const active=b.dataset.key===S.activeImKey;
+    b.style.background=active?'#222':'#fff';b.style.color=active?'#fff':'#666';
+    b.style.borderColor=active?'#222':'rgba(0,0,0,0.18)';b.style.fontWeight=active?'500':'400';
+  });
+}
+
+/* ═══════════════════════════════════════
+   LEGENDS
+═══════════════════════════════════════ */
+function buildRegionLegend(elId,vals){
+  const el=document.getElementById(elId);if(!el)return;el.innerHTML='';
+  vals.forEach(r=>{
+    const s=document.createElement('span');
+    s.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;color:#666;';
+    s.innerHTML=`<span style="width:9px;height:9px;border-radius:2px;background:${rColor(r)};display:inline-block;"></span>${r}`;
+    el.appendChild(s);
+  });
+}
+function buildLegends(){
+  const exVals=[...new Set(S.rows.map(r=>r[S.exGran]))].filter(Boolean).sort();
+  const imVals=[...new Set(S.rows.map(r=>r[S.imGran]))].filter(Boolean).sort();
+  // bubble legend = ex vals
+  const leg=document.getElementById('b-legend');leg.innerHTML='';
+  exVals.forEach(r=>{
+    const s=document.createElement('span');
+    s.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;color:#666;cursor:pointer;';
+    s.innerHTML=`<span style="width:9px;height:9px;border-radius:50%;background:${rColor(r)};display:inline-block;opacity:0.9;"></span>${r}`;
+    s.onclick=()=>{document.getElementById('b-ex-filter').value=r;destroyAll();renderAll();};
+    leg.appendChild(s);
+  });
+  buildRegionLegend('w-legend-row',exVals);
+}
+
+/* ═══════════════════════════════════════
+   RENDER ALL
+═══════════════════════════════════════ */
+function renderAll(){
+  if(!S.rows.length) return;
+  updateExTabStyles();
+  updateWfTabStyles();
+  updatePriorLabel();
+  renderBubble();
+  renderDiverging();
+  renderWaterfall();
+}
+
+/* ═══════════════════════════════════════
+   STAT CARDS (shared)
+═══════════════════════════════════════ */
+function buildStatCards(elId, curRows, priorRows){
+  const curTotal  = curRows.reduce((s,r)=>s+r.value,0);
+  const momTotal  = curRows.reduce((s,r)=>s+r.mom,0);
+  const vsAvgTotal= curRows.reduce((s,r)=>s+r.vsAvg,0);
+  const priorTotal= priorRows.reduce((s,r)=>s+r.value,0);
+  const isMom=S.view==='mom';
+  document.getElementById(elId).innerHTML=`
+    <div class="stat-card"><div class="lbl">${dateLabel(S.curDate)} total</div><div class="val">${fmtN(curTotal)}</div></div>
+    <div class="stat-card"><div class="lbl">${dateLabel(S.priorDate)||'Prior'} total</div><div class="val">${fmtN(priorTotal)}</div></div>
+    <div class="stat-card"><div class="lbl">m-o-m change</div><div class="val" style="color:${momTotal<0?'#E24B4A':'#1D9E75'}">${fmtKbd(momTotal)}</div></div>
+    <div class="stat-card"><div class="lbl">vs Annual avg</div><div class="val" style="color:${vsAvgTotal<0?'#E24B4A':'#1D9E75'}">${fmtKbd(vsAvgTotal)}</div></div>`;
+}
+
+/* ═══════════════════════════════════════
+   BUBBLE CHART
+═══════════════════════════════════════ */
+function renderBubble(){
+  const curDk  = dateKey(S.curDate);
+  const priorDk= dateKey(S.priorDate);
+  const curRows  = getRowsForDate(curDk);
+  const priorRows= getRowsForDate(priorDk);
+
+  // aggregate current month
+  const curAgg  = aggRows(curRows,  S.exGran, S.imGran);
+  const priorAgg= aggRows(priorRows,S.exGran, S.imGran);
+
+  // build a map of prior values by ex+im key
+  const priorMap={};
+  priorAgg.forEach(d=>{ priorMap[d.ex+'|||'+d.im]=d; });
+
+  // apply filters
+  const exF=document.getElementById('b-ex-filter').value;
+  const imF=document.getElementById('b-im-filter').value;
+
+  let data=curAgg;
+  if(exF!=='all') data=data.filter(d=>d.ex===exF);
+  if(imF!=='all') data=data.filter(d=>d.im===imF);
+
+  // stat cards filtered to match bubble filters
+  const filteredCur=getRowsForDate(curDk)
+    .filter(r=>exF==='all'||r[S.exGran]===exF)
+    .filter(r=>imF==='all'||r[S.imGran]===imF);
+  const filteredPrior=getRowsForDate(priorDk)
+    .filter(r=>exF==='all'||r[S.exGran]===exF)
+    .filter(r=>imF==='all'||r[S.imGran]===imF);
+  buildStatCards('b-stats', filteredCur, filteredPrior);
+
+  const isMom=S.view==='mom';
+
+  // X axis: prior month value (mom) OR prevYrAvg (avg)
+  // Y axis: always current month value
+  const pts=data.map(d=>{
+    const prior=priorMap[d.ex+'|||'+d.im];
+    const xVal = isMom ? (prior?prior.value:0) : d.prevYrAvg;
+    return { x:Math.round(xVal), y:Math.round(d.value), r:Math.max(3,Math.sqrt(Math.abs(isMom?d.mom:d.vsAvg))*0.85), _d:d, _prior:prior };
+  });
+
+  const byColor={};
+  pts.forEach(p=>{const ck=p._d.ex;if(!byColor[ck])byColor[ck]=[];byColor[ck].push(p);});
+  const datasets=Object.entries(byColor).map(([ck,ptsArr])=>({
+    label:ck, data:ptsArr,
+    backgroundColor:rColor(ck)+'aa', borderColor:rColor(ck), borderWidth:1
+  }));
+
+  const maxV=Math.max(...pts.map(p=>Math.max(p.x,p.y)),100),pad=maxV*0.1;
+  const xLabel= isMom ? (dateLabel(S.priorDate)||'Prior month')+' kb/d' : 'Annual avg kb/d';
+  const yLabel= dateLabel(S.curDate)+' kb/d';
+
+  document.getElementById('b-note').textContent=
+    `X = ${isMom?dateLabel(S.priorDate)+' volume':'annual average'}, Y = ${dateLabel(S.curDate)} volume. Bubble size = |${isMom?'m-o-m':'vs avg'}|. Coloured by ${S.exGran}.`;
+
+  const ctx=document.getElementById('bubbleChart').getContext('2d');
+  if(bChart){
+    bChart.data.datasets=datasets;
+    bChart.options.scales.x.min=-pad;bChart.options.scales.x.max=maxV+pad;
+    bChart.options.scales.y.min=-pad;bChart.options.scales.y.max=maxV+pad;
+    bChart.options.scales.x.title.text=xLabel;
+    bChart.options.scales.y.title.text=yLabel;
+    bChart.update();return;
+  }
+  bChart=new Chart(ctx,{
+    type:'bubble',data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,layout:{padding:16},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false,external(ctx2){
+          const box=document.getElementById('b-tooltip');
+          if(ctx2.tooltip.opacity===0){box.style.display='none';return;}
+          const p=ctx2.tooltip.dataPoints[0].raw;
+          const d=p._d;
+          const isMom=S.view==='mom';
+          box.innerHTML=`
+            <div style="font-weight:500;font-size:13px;margin-bottom:6px;">${d.ex} → ${d.im}</div>
+            <div style="color:#888;margin-bottom:2px;">${dateLabel(S.curDate)}: <b>${fmtN(d.value)}</b></div>
+            <div style="color:#888;margin-bottom:2px;">${isMom?(dateLabel(S.priorDate)||'Prior')+': <b>'+fmtN(p.x)+'</b>':'Annual avg: <b>'+fmtN(d.prevYrAvg)+'</b>'}</div>
+            <div style="color:${(isMom?d.mom:d.vsAvg)<0?'#E24B4A':'#1D9E75'};font-weight:500;margin-top:4px;">${isMom?'m-o-m':'vs avg'}: ${fmtKbd(isMom?d.mom:d.vsAvg)}</div>`;
+          box.style.display='block';
+          box.style.left=(ctx2.tooltip.caretX+14)+'px';
+          box.style.top=(ctx2.tooltip.caretY-10)+'px';
+        }}
+      },
+      scales:{
+        x:{min:-pad,max:maxV+pad,title:{display:true,text:xLabel,color:'#888',font:{size:11}},grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>v>=0?Math.round(v).toLocaleString():''}},
+        y:{min:-pad,max:maxV+pad,title:{display:true,text:yLabel,color:'#888',font:{size:11}},grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>v>=0?Math.round(v).toLocaleString():''}}
+      }
+    },
+    plugins:[
+      {id:'diag',beforeDraw(ch){
+        const{ctx:c,scales:{x,y}}=ch;
+        c.save();c.strokeStyle='rgba(136,135,128,0.3)';c.lineWidth=1;c.setLineDash([5,4]);
+        c.beginPath();c.moveTo(x.getPixelForValue(0),y.getPixelForValue(0));
+        c.lineTo(x.getPixelForValue(x.max),y.getPixelForValue(x.max));c.stroke();
+        c.setLineDash([]);c.fillStyle='rgba(136,135,128,0.45)';c.font='10px sans-serif';
+        c.fillText('no change',x.getPixelForValue(x.max*0.72),y.getPixelForValue(x.max*0.78));
+        c.restore();
+      }},
+      {id:'bubblelabels',afterDatasetsDraw(ch){
+        const{ctx:c,scales:{x,y}}=ch;
+        c.save();c.font='500 9px sans-serif';c.textAlign='left';c.textBaseline='middle';
+        ch.data.datasets.forEach(ds=>{ds.data.forEach(pt=>{
+          if(!pt._d) return;
+          if(pt.x < 1500 && pt.y < 1500) return;
+          const xp=x.getPixelForValue(pt.x),yp=y.getPixelForValue(pt.y),r=pt.r||4;
+          c.fillStyle='rgba(40,40,40,0.72)';c.fillText(pt._d.im,xp+r+3,yp);
+        });});
+        c.restore();
+      }}
+    ]
+  });
+}
+
+/* ═══════════════════════════════════════
+   DIVERGING BARS
+═══════════════════════════════════════ */
+function renderDiverging(){
+  const curDk=dateKey(S.curDate);
+  const curRows=getRowsForDate(curDk).filter(r=>r[S.exGran]===S.activeExKey);
+  const allCurRows=getRowsForDate(curDk).filter(r=>r[S.exGran]===S.activeExKey);
+  const allPriorRows=getRowsForDate(dateKey(S.priorDate)).filter(r=>r[S.exGran]===S.activeExKey);
+  buildStatCards('d-stats',allCurRows,allPriorRows);
+
+  const isMom=S.view==='mom';
+  const agg=aggByIm(curRows,S.imGran);
+  const sorted=[...agg].sort((a,b)=>isMom?a.mom-b.mom:a.vsAvg-b.vsAvg);
   const labels=sorted.map(d=>d.im);
   const barData=sorted.map(d=>Math.round(isMom?d.mom:d.vsAvg));
   const barCol=sorted.map(d=>rColor(d.im)+'cc');
   const barBord=sorted.map(d=>rColor(d.im));
+
   buildRegionLegend('d-legend-row',[...new Set(sorted.map(d=>d.im))]);
-  document.getElementById('d-note').textContent=isMom?`Bars = col 7 (m-o-m). Coloured by import region. Sorted largest decline → largest gain.`:`Bars = col 9 (vs 2025 avg). Coloured by import region. Sorted largest decline → largest gain.`;
-  document.getElementById('d-view-desc').textContent=isMom?`${S.month1} → ${S.month2}`:`${S.month2} vs 2025 avg`;
-  const h=Math.max(300,sorted.length*36+80);document.getElementById('d-chart-wrap').style.height=h+'px';
-  const allV=barData,xMin=Math.min(...allV)*1.12,xMax=Math.max(...allV)*1.12+20;
-  const datasets=[{label:isMom?'m-o-m':'vs 2025 avg',data:barData,backgroundColor:barCol,borderColor:barBord,borderWidth:1,borderRadius:3}];
+  document.getElementById('d-note').textContent=
+    `Showing ${S.exGran}=${S.activeExKey}. Bars = ${isMom?'m-o-m change':'vs Annual Average'}. Coloured by ${S.imGran}.`;
+
+  const h=Math.max(300,sorted.length*36+80);
+  document.getElementById('d-chart-wrap').style.height=h+'px';
+  const allV=barData;
+  const xMin=Math.min(...allV,0)*1.12, xMax=Math.max(...allV,0)*1.12+20;
+  const datasets=[{label:isMom?'m-o-m':'vs avg',data:barData,backgroundColor:barCol,borderColor:barBord,borderWidth:1,borderRadius:3}];
   const ctx=document.getElementById('divChart').getContext('2d');
   if(dChart){dChart.data.labels=labels;dChart.data.datasets=datasets;dChart.options.scales.x.min=xMin;dChart.options.scales.x.max=xMax;dChart.update();return;}
-  dChart=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:72}},plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>i[0].label,label:i=>' '+(S.divView==='mom'?'m-o-m':'vs 2025')+': '+(i.raw>0?'+':'')+i.raw.toLocaleString()+' kb/d'}}},scales:{x:{min:xMin,max:xMax,grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>v.toLocaleString()},border:{display:false}},y:{grid:{display:false},ticks:{color:'#555',font:{size:11},autoSkip:false},border:{display:false}}}},plugins:[{id:'zero',afterDraw(ch){const{ctx:c,scales:{x,y}}=ch;const xz=x.getPixelForValue(0);c.save();c.strokeStyle='rgba(136,135,128,0.45)';c.lineWidth=1;c.beginPath();c.moveTo(xz,y.top);c.lineTo(xz,y.bottom);c.stroke();c.restore();}},{id:'lbl',afterDatasetsDraw(ch){const{ctx:c,scales:{x,y},data}=ch;const vals=data.datasets[0].data;c.save();c.font='500 10px sans-serif';c.textBaseline='middle';vals.forEach((v,i)=>{const yp=y.getPixelForValue(i),xp=x.getPixelForValue(v);c.fillStyle=v<0?'#4a1a1a':'#1a3a1a';c.textAlign=v<0?'right':'left';c.fillText((v>0?'+':'')+v.toLocaleString(),xp+(v<0?-4:4),yp);});c.restore();}}]});
+  dChart=new Chart(ctx,{
+    type:'bar',data:{labels,datasets},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:72}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>i[0].label,label:i=>' '+(isMom?'m-o-m':'vs avg')+': '+(i.raw>0?'+':'')+i.raw.toLocaleString()+' kb/d'}}},
+      scales:{
+        x:{min:xMin,max:xMax,grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>v.toLocaleString()},border:{display:false}},
+        y:{grid:{display:false},ticks:{color:'#555',font:{size:11},autoSkip:false},border:{display:false}}
+      }
+    },
+    plugins:[
+      {id:'zero',afterDraw(ch){const{ctx:c,scales:{x,y}}=ch;const xz=x.getPixelForValue(0);c.save();c.strokeStyle='rgba(136,135,128,0.45)';c.lineWidth=1;c.beginPath();c.moveTo(xz,y.top);c.lineTo(xz,y.bottom);c.stroke();c.restore();}},
+      {id:'lbl',afterDatasetsDraw(ch){const{ctx:c,scales:{x,y},data}=ch;const vals=data.datasets[0].data;c.save();c.font='500 10px sans-serif';c.textBaseline='middle';vals.forEach((v,i)=>{const yp=y.getPixelForValue(i),xp=x.getPixelForValue(v);c.fillStyle=v<0?'#4a1a1a':'#1a3a1a';c.textAlign=v<0?'right':'left';c.fillText((v>0?'+':'')+v.toLocaleString(),xp+(v<0?-4:4),yp);});c.restore();}}
+    ]
+  });
 }
 
-/* ── WATERFALL ── */
-function buildWaterfallTabs(){const el=document.getElementById('w-im-tabs');el.innerHTML='';S.imRegions.forEach(r=>{const btn=document.createElement('button');btn.className='rtab';btn.textContent=r;btn.dataset.key=r;btn.onclick=()=>{S.activeImKey=r;renderWaterfall();};el.appendChild(btn);});}
-function updateWfTabStyles(){document.querySelectorAll('#w-im-tabs .rtab').forEach(b=>{const active=b.dataset.key===S.activeImKey;b.style.background=active?'#222':'#fff';b.style.color=active?'#fff':'#666';b.style.borderColor=active?'#222':'rgba(0,0,0,0.18)';b.style.fontWeight=active?'500':'400';});}
-function setWaterfallView(v){
-  S.wfView=v;document.getElementById('w-view-vs2025').classList.toggle('active',v==='vs2025');document.getElementById('w-view-mom').classList.toggle('active',v==='mom');
-  const bl=document.getElementById('w-base-label'),fl=document.getElementById('w-final-label');
-  if(bl)bl.textContent=v==='mom'?S.month1:'2025 avg';if(fl)fl.textContent=S.month2+' total';
-  if(wChart){wChart.destroy();wChart=null;}renderWaterfall();
-}
+/* ═══════════════════════════════════════
+   WATERFALL
+═══════════════════════════════════════ */
 function renderWaterfall(){
-  updateWfTabStyles();const imR=S.activeImKey,isMom=S.wfView==='mom';
-  const imRows=S.rows.filter(d=>d.imRegion===imR);
-  const base=isMom?imRows.reduce((s,d)=>s+d.vol1,0):imRows.reduce((s,d)=>s+d.avg2025,0);
-  const final=imRows.reduce((s,d)=>s+d.vol2,0);
-  const baseLabel=isMom?S.month1:'2025 avg';
-  const stepMap={};imRows.forEach(d=>{if(!stepMap[d.exRegion])stepMap[d.exRegion]=0;stepMap[d.exRegion]+=isMom?d.mom:d.vsAvg;});
-  const steps=Object.entries(stepMap).map(([ex,val])=>({ex,val:Math.round(val)})).sort((a,b)=>a.val-b.val);
-  const totalChange=final-base,nPos=steps.filter(s=>s.val>0).length,nNeg=steps.filter(s=>s.val<0).length;
-  document.getElementById('w-stats').innerHTML=`<div class="stat-card"><div class="lbl">${baseLabel} — ${imR}</div><div class="val">${Math.round(base).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">${S.month2} total — ${imR}</div><div class="val">${Math.round(final).toLocaleString()} kb/d</div></div><div class="stat-card"><div class="lbl">Total change</div><div class="val" style="color:${totalChange<0?'#E24B4A':'#1D9E75'}">${fmtKbd(totalChange)}</div></div><div class="stat-card"><div class="lbl">EX regions adding</div><div class="val" style="color:#1D9E75">${nPos}</div></div><div class="stat-card"><div class="lbl">EX regions subtracting</div><div class="val" style="color:#E24B4A">${nNeg}</div></div>`;
-  document.getElementById('w-view-desc').textContent=isMom?`Base=${S.month1} (col5). Steps=col7 per EX_REGION into ${imR}`:`Base=2025 avg (col8). Steps=col9 per EX_REGION into ${imR}`;
-  document.getElementById('w-note').textContent=isMom?`Base=${S.month1} total. Steps=each EX_REGION m-o-m (col7). Final=${S.month2} total.`:`Base=2025 avg. Steps=each EX_REGION vs 2025 avg (col9). Final=${S.month2} total.`;
+  const curDk  =dateKey(S.curDate);
+  const priorDk=dateKey(S.priorDate);
+  const isMom  =S.view==='mom';
+
+  const imRows=S.rows.filter(r=>r.dateKey===curDk&&r[S.imGran]===S.activeImKey);
+  const imRowsPrior=S.rows.filter(r=>r.dateKey===priorDk&&r[S.imGran]===S.activeImKey);
+
+  const base = isMom
+    ? imRowsPrior.reduce((s,r)=>s+r.value,0)
+    : (imRows.length>0 ? imRows.reduce((s,r)=>s+r.prevYrAvg,0)/imRows.length*imRows.length : 0);
+    // for avg: sum of prevYrAvg is actually meaningful here as each row's avg contribution
+  const final= imRows.reduce((s,r)=>s+r.value,0);
+  const baseLabel= isMom?(dateLabel(S.priorDate)||'Prior month'):'Annual avg';
+
+  // steps by export group
+  const stepMap={};
+  imRows.forEach(r=>{
+    const ex=r[S.exGran]||'Unknown';
+    if(!stepMap[ex]) stepMap[ex]={ex,mom:0,vsAvg:0};
+    stepMap[ex].mom   +=r.mom;
+    stepMap[ex].vsAvg +=r.vsAvg;
+  });
+  const steps=Object.values(stepMap).map(d=>({ex:d.ex,val:Math.round(isMom?d.mom:d.vsAvg)})).sort((a,b)=>a.val-b.val);
+
+  const totalChange=final-base;
+  const nPos=steps.filter(s=>s.val>0).length,nNeg=steps.filter(s=>s.val<0).length;
+
+  buildStatCards('w-stats',
+    getRowsForDate(curDk).filter(r=>r[S.imGran]===S.activeImKey),
+    getRowsForDate(priorDk).filter(r=>r[S.imGran]===S.activeImKey)
+  );
+  document.getElementById('w-note').textContent=
+    `Import group: ${S.imGran}=${S.activeImKey}. Base=${baseLabel}. Steps=each ${S.exGran} ${isMom?'m-o-m':'vs Annual avg'} contribution. Final=${dateLabel(S.curDate)}.`;
+
+  const wbl=document.getElementById('w-base-label');
+  const wfl=document.getElementById('w-final-label');
+  if(wbl) wbl.textContent=baseLabel;
+  if(wfl) wfl.textContent=dateLabel(S.curDate)||'current month';
 
   const labels=[],floats=[],grays=[],posVals=[],negVals=[],posBg=[],negBg=[];
   labels.push(baseLabel);floats.push(0);grays.push(Math.round(base));posVals.push(0);negVals.push(0);posBg.push('rgba(0,0,0,0)');negBg.push('rgba(0,0,0,0)');
@@ -305,53 +1088,61 @@ function renderWaterfall(){
     posBg.push(s.val>=0?col:'rgba(0,0,0,0)');negBg.push(s.val<0?col:'rgba(0,0,0,0)');
     running+=s.val;
   });
-  labels.push(S.month2);floats.push(0);grays.push(Math.round(final));posVals.push(0);negVals.push(0);posBg.push('rgba(0,0,0,0)');negBg.push('rgba(0,0,0,0)');
+  labels.push(dateLabel(S.curDate));floats.push(0);grays.push(Math.round(final));posVals.push(0);negVals.push(0);posBg.push('rgba(0,0,0,0)');negBg.push('rgba(0,0,0,0)');
 
   const allY=[Math.round(base),Math.round(final)];let r2=Math.round(base);steps.forEach(s=>{allY.push(r2);r2+=s.val;allY.push(r2);});
   const yMin=Math.min(...allY)*0.93,yMax=Math.max(...allY)*1.06;
   const datasets=[
     {label:'_float',data:floats,backgroundColor:'rgba(0,0,0,0)',borderColor:'rgba(0,0,0,0)',stack:'wf'},
     {label:'Base/Final',data:grays,backgroundColor:'#222',borderColor:'#222',stack:'wf',borderRadius:3},
-    {label:'Growth', data:posVals,backgroundColor:posBg,stack:'wf',borderRadius:3},
+    {label:'Growth',data:posVals,backgroundColor:posBg,stack:'wf',borderRadius:3},
     {label:'Decline',data:negVals,backgroundColor:negBg,stack:'wf',borderRadius:3},
   ];
-  const h=Math.max(400,(steps.length+2)*58+80);document.getElementById('w-chart-wrap').style.height=h+'px';
+  const h=Math.max(400,(steps.length+2)*58+80);
+  document.getElementById('w-chart-wrap').style.height=h+'px';
   const ctx=document.getElementById('wfChart').getContext('2d');
   if(wChart){wChart.data.labels=labels;wChart.data.datasets=datasets;wChart.options.scales.y.min=yMin;wChart.options.scales.y.max=yMax;wChart.update();return;}
-  wChart=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},plugins:{legend:{display:false},tooltip:{callbacks:{label(item){if(item.dataset.label==='_float')return null;if(item.dataset.label==='Base/Final')return ' total: '+Math.round(item.raw).toLocaleString()+' kb/d';const raw=item.dataset.label==='Decline'?-item.raw:item.raw;return ' '+(raw>0?'+':'')+Math.round(raw).toLocaleString()+' kb/d';},filter(item){return item.dataset.label!=='_float'&&item.raw!==0;}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#555',font:{size:11}},border:{display:false}},y:{stacked:true,min:yMin,max:yMax,grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>Math.round(v).toLocaleString()},border:{display:false}}}},plugins:[{id:'wf-lbl',afterDatasetsDraw(chart){const{ctx:c,scales:{x,y},data}=chart;c.save();c.font='500 11px sans-serif';c.textBaseline='bottom';c.textAlign='center';const pD=data.datasets[2].data,nD=data.datasets[3].data,fD=data.datasets[0].data,grD=data.datasets[1].data;data.labels.forEach((lbl,i)=>{const xp=x.getPixelForValue(i);if(grD[i]>0){c.fillStyle='#333';c.fillText(Math.round(grD[i]).toLocaleString(),xp,y.getPixelForValue(grD[i])-4);return;}if(pD[i]>0){c.fillStyle='#1a3a1a';c.fillText('+'+Math.round(pD[i]).toLocaleString(),xp,y.getPixelForValue(fD[i]+pD[i])-4);}if(nD[i]>0){c.fillStyle='#4a1a1a';c.fillText('-'+Math.round(nD[i]).toLocaleString(),xp,y.getPixelForValue(fD[i])-4);}});c.restore();}}]});
+  wChart=new Chart(ctx,{
+    type:'bar',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label(item){if(item.dataset.label==='_float')return null;if(item.dataset.label==='Base/Final')return ' total: '+Math.round(item.raw).toLocaleString()+' kb/d';const raw=item.dataset.label==='Decline'?-item.raw:item.raw;return ' '+(raw>0?'+':'')+Math.round(raw).toLocaleString()+' kb/d';},
+        filter(item){return item.dataset.label!=='_float'&&item.raw!==0;}
+      }}},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#555',font:{size:11}},border:{display:false}},
+        y:{stacked:true,min:yMin,max:yMax,grid:{color:'rgba(136,135,128,0.12)'},ticks:{color:'#888',font:{size:10},callback:v=>Math.round(v).toLocaleString()},border:{display:false}}
+      }
+    },
+    plugins:[{id:'wf-lbl',afterDatasetsDraw(chart){
+      const{ctx:c,scales:{x,y},data}=chart;c.save();c.font='500 11px sans-serif';c.textBaseline='bottom';c.textAlign='center';
+      const pD=data.datasets[2].data,nD=data.datasets[3].data,fD=data.datasets[0].data,grD=data.datasets[1].data;
+      data.labels.forEach((lbl,i)=>{const xp=x.getPixelForValue(i);
+        if(grD[i]>0){c.fillStyle='#333';c.fillText(Math.round(grD[i]).toLocaleString(),xp,y.getPixelForValue(grD[i])-4);return;}
+        if(pD[i]>0){c.fillStyle='#1a3a1a';c.fillText('+'+Math.round(pD[i]).toLocaleString(),xp,y.getPixelForValue(fD[i]+pD[i])-4);}
+        if(nD[i]>0){c.fillStyle='#4a1a1a';c.fillText('-'+Math.round(nD[i]).toLocaleString(),xp,y.getPixelForValue(fD[i])-4);}
+      });c.restore();
+    }}]
+  });
 }
 
-/* ── AUTO-FETCH data2.xlsx FROM GITHUB ── */
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');document.getElementById('panel-'+name).classList.add('active');
+  if(name==='sankey') renderSankey();
+}
+
+/* ═══════════════════════════════════════
+   AUTO-FETCH data.xlsx FROM GITHUB
+═══════════════════════════════════════ */
 (function(){
-  const DATA_URL='https://raw.githubusercontent.com/jennythomson-123/crude-flow-dashboard-imports/main/data2.xlsx';
+  const DATA_URL='https://raw.githubusercontent.com/jennythomson-123/crude-flow-dashboard/main/data.xlsx';
   setStatus('Loading data…','');
   fetch(DATA_URL)
     .then(r=>{if(!r.ok)throw new Error('not found');return r.arrayBuffer();})
-    .then(buf=>{processRawData(buf,'data2.xlsx');})
-    .catch(()=>{
-      setStatus('No data2.xlsx found — upload your Excel file to update','');
-      document.getElementById('period-lbl').textContent='— sample data';
-      const SAMPLE=[
-        {exRegion:"Africa",exCountry:"Nigeria",imRegion:"Africa",imCountry:"Ivory Coast",vol1:35.63,vol2:32.18,mom:-3.45,avg2025:54.09,vsAvg:-21.91},
-        {exRegion:"Africa",exCountry:"Nigeria",imRegion:"OECD Europe",imCountry:"France",vol1:462.57,vol2:91.85,mom:-370.72,avg2025:388.96,vsAvg:-297.11},
-        {exRegion:"Africa",exCountry:"Nigeria",imRegion:"OECD Europe",imCountry:"Italy",vol1:1015.22,vol2:262.3,mom:-752.92,avg2025:864.24,vsAvg:-601.94},
-        {exRegion:"Africa",exCountry:"Nigeria",imRegion:"Other Asia",imCountry:"China",vol1:957.96,vol2:436.15,mom:-521.81,avg2025:1023.27,vsAvg:-587.12},
-        {exRegion:"Africa",exCountry:"Nigeria",imRegion:"Other Asia",imCountry:"India",vol1:565.15,vol2:45.06,mom:-520.09,avg2025:335.13,vsAvg:-290.07},
-        {exRegion:"Middle East",exCountry:"Saudi Arabia",imRegion:"OECD Asia Oceania",imCountry:"Japan",vol1:2369.68,vol2:193.56,mom:-2176.12,avg2025:2097.35,vsAvg:-1903.79},
-        {exRegion:"Middle East",exCountry:"Saudi Arabia",imRegion:"OECD Asia Oceania",imCountry:"South Korea",vol1:1855.98,vol2:344.26,mom:-1511.72,avg2025:1974.53,vsAvg:-1630.27},
-        {exRegion:"Middle East",exCountry:"Saudi Arabia",imRegion:"Other Asia",imCountry:"China",vol1:4587.09,vol2:1130.93,mom:-3456.16,avg2025:5322.73,vsAvg:-4191.8},
-        {exRegion:"Middle East",exCountry:"Saudi Arabia",imRegion:"Other Asia",imCountry:"India",vol1:2638.62,vol2:476.99,mom:-2161.63,avg2025:2235.41,vsAvg:-1758.42},
-        {exRegion:"Eurasia",exCountry:"Russia",imRegion:"OECD Europe",imCountry:"Italy",vol1:208.57,vol2:162.31,mom:-46.26,avg2025:463.46,vsAvg:-301.15},
-        {exRegion:"Eurasia",exCountry:"Russia",imRegion:"Other Asia",imCountry:"China",vol1:1408.71,vol2:336.72,mom:-1071.99,avg2025:1213.99,vsAvg:-877.27},
-        {exRegion:"Eurasia",exCountry:"Russia",imRegion:"Other Asia",imCountry:"India",vol1:846.09,vol2:162.46,mom:-683.63,avg2025:1700.31,vsAvg:-1537.85},
-        {exRegion:"OECD Americas",exCountry:"United States",imRegion:"OECD Europe",imCountry:"Netherlands",vol1:555.37,vol2:417.63,mom:-137.74,avg2025:529.94,vsAvg:-112.31},
-        {exRegion:"OECD Americas",exCountry:"United States",imRegion:"Other Asia",imCountry:"China",vol1:261.59,vol2:158.79,mom:-102.8,avg2025:319.2,vsAvg:-160.41},
-        {exRegion:"NON-OECD Americas",exCountry:"Venezuela",imRegion:"Other Asia",imCountry:"China",vol1:1213.28,vol2:288.69,mom:-924.59,avg2025:1577.58,vsAvg:-1288.89},
-        {exRegion:"OECD Europe",exCountry:"Norway",imRegion:"OECD Europe",imCountry:"Netherlands",vol1:373.63,vol2:272.31,mom:-101.32,avg2025:477.15,vsAvg:-204.84},
-        {exRegion:"Other Asia",exCountry:"Malaysia",imRegion:"Other Asia",imCountry:"Thailand",vol1:153.23,vol2:12.99,mom:-140.24,avg2025:110.49,vsAvg:-97.5},
-      ];
-      initData(SAMPLE);
-    });
+    .then(buf=>processRawData(buf,'data.xlsx'))
+    .catch(()=>setStatus('Upload your Excel file to begin',''));
 })();
 </script>
 </body>
